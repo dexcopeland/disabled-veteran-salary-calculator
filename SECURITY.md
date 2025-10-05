@@ -279,7 +279,7 @@ const RATE_LIMIT = {
 If you discover a security vulnerability, please report it responsibly:
 
 1. **Do Not** create a public GitHub issue
-2. Contact: [Your contact method here]
+2. Contact: dexcopeland@gmail.com
 3. Provide detailed description of the vulnerability
 4. Allow reasonable time for fix before public disclosure
 
@@ -330,6 +330,6 @@ Potential improvements for future versions:
 
 ---
 
-**Last Updated**: December 2024  
+**Last Updated**: October 2025  
 **Version**: 1.0  
-**Security Contact**: [Your contact information]
+**Security Contact**: Dex-Xavier Copeland (dexcopeland@gmail.com)

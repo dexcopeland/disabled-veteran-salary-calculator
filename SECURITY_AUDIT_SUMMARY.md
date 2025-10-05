@@ -349,7 +349,7 @@ The VA Disability & Salary Calculator has been thoroughly secured against common
 
 ---
 
-**Audit Date**: December 2024  
+**Audit Date**: October 2025  
 **Auditor**: Dex-Xavier Copeland  
-**Next Review**: March 2025  
+**Next Review**: January 2026  
 **Version**: 1.0
