@@ -180,5 +180,5 @@ For tax questions, consult a qualified tax professional or visit [IRS.gov](https
 ---
 
 **Version**: 1.0  
-**Last Updated**: December 2024  
+**Last Updated**: October 5, 2025  
 **VA Rates Effective**: December 1, 2024
