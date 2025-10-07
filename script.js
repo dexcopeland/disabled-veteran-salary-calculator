@@ -267,6 +267,12 @@ const taxRates = {
     'WI': { state: 0.0765, county: 0, city: 0, progressive: true },
     'WY': { state: 0, county: 0, city: 0, progressive: false },
     'DC': { state: 0.1075, county: 0, city: 0, progressive: true },
+    // US Territories
+    'AS': { state: 0, county: 0, city: 0, progressive: false }, // American Samoa
+    'GU': { state: 0, county: 0, city: 0, progressive: false }, // Guam
+    'MP': { state: 0, county: 0, city: 0, progressive: false }, // Northern Mariana Islands
+    'PR': { state: 0, county: 0, city: 0, progressive: false }, // Puerto Rico (uses federal tax system)
+    'VI': { state: 0, county: 0, city: 0, progressive: false }, // U.S. Virgin Islands
 };
 
 // City-specific tax rates
@@ -463,7 +469,7 @@ function sanitizeNumber(input, min = -Infinity, max = Infinity) {
 // Validate inputs
 function validateInputs() {
     const desiredIncomeInput = document.getElementById('desiredIncome').value;
-    const zipCodeInput = document.getElementById('zipCode').value;
+    const stateSelect = document.getElementById('stateSelect').value;
     
     // Sanitize and validate desired income
     const desiredIncome = sanitizeNumber(desiredIncomeInput, 0, 100000000);
@@ -478,10 +484,9 @@ function validateInputs() {
         throw new Error('Desired income seems unreasonably high. Please enter a realistic amount.');
     }
     
-    // Sanitize and validate ZIP code format (5 digits only)
-    const zipCode = sanitizeString(zipCodeInput);
-    if (zipCode && !/^\d{5}$/.test(zipCode)) {
-        throw new Error('Please enter a valid 5-digit ZIP code or leave it blank');
+    // Validate state selection (optional but if provided, must be valid)
+    if (stateSelect && !taxRates[stateSelect]) {
+        throw new Error('Please select a valid state or territory');
     }
     
     return true;
@@ -517,14 +522,14 @@ function calculateSalary() {
                 desiredIncome *= 12;
             }
             
-            const zipCode = document.getElementById('zipCode').value;
+            const stateCode = document.getElementById('stateSelect').value;
             const filingStatus = getFilingStatus();
             
             // 1. Calculate VA compensation (tax-free)
             const vaCompensation = calculateVACompensation(vaRating, dependents, hasSpouse, hasDependentParent);
             
             // 2. Calculate required salary to achieve desired take-home pay
-            const result = calculateRequiredSalary(desiredIncome, vaCompensation, zipCode, filingStatus);
+            const result = calculateRequiredSalary(desiredIncome, vaCompensation, stateCode, filingStatus);
             
             // 3. Display results
             displayResults(result, vaCompensation);
@@ -591,7 +596,7 @@ function calculateVACompensation(rating, dependents, hasSpouse, hasDependentPare
 }
 
 // Calculate the required gross salary to achieve desired take-home pay
-function calculateRequiredSalary(desiredAnnualTakeHome, vaMonthlyCompensation, zipCode, filingStatus) {
+function calculateRequiredSalary(desiredAnnualTakeHome, vaMonthlyCompensation, stateCode, filingStatus) {
     // Convert VA compensation to annual
     const vaAnnualCompensation = vaMonthlyCompensation * 12;
     
@@ -625,7 +630,7 @@ function calculateRequiredSalary(desiredAnnualTakeHome, vaMonthlyCompensation, z
     // Binary search to find the gross salary that results in the target after-tax income
     for (let i = 0; i < 50; i++) { // Limit iterations to prevent infinite loops
         const mid = Math.floor((low + high) / 2);
-        const calc = calculateTaxes(mid, zipCode, filingStatus);
+        const calc = calculateTaxes(mid, stateCode, filingStatus);
         
         // Calculate how close we are to the target
         const currentNet = mid - calc.totalTaxes;
@@ -655,7 +660,7 @@ function calculateRequiredSalary(desiredAnnualTakeHome, vaMonthlyCompensation, z
 }
 
 // Calculate taxes for a given gross salary
-function calculateTaxes(grossSalary, zipCode, filingStatus) {
+function calculateTaxes(grossSalary, stateCode, filingStatus) {
     // Calculate FICA taxes (Social Security + Medicare)
     const socialSecurityTax = Math.min(grossSalary, 168600) * 0.062; // 6.2% up to wage base limit
     const medicareTax = grossSalary * 0.0145; // 1.45% for all income
@@ -668,12 +673,10 @@ function calculateTaxes(grossSalary, zipCode, filingStatus) {
     const taxableIncome = Math.max(0, grossSalary - standardDeduction);
     const federalTax = calculateProgressiveTax(taxableIncome, federalTaxBrackets[filingStatus]);
     
-    // Calculate state, county, and local taxes
-    const localTaxInfo = getLocalTaxRates(zipCode);
-    const stateTax = grossSalary * localTaxInfo.stateTaxRate;
-    const countyTax = grossSalary * localTaxInfo.countyTaxRate;
-    const cityTax = grossSalary * localTaxInfo.cityTaxRate;
-    const localTax = countyTax + cityTax;
+    // Calculate state and local taxes
+    const taxInfo = getStateTaxRates(stateCode);
+    const stateTax = grossSalary * taxInfo.stateTaxRate;
+    const localTax = grossSalary * (taxInfo.countyTaxRate + taxInfo.cityTaxRate);
     
     // Calculate total taxes and net salary
     const totalTaxes = federalTax + stateTax + localTax + ficaTax;
@@ -686,7 +689,7 @@ function calculateTaxes(grossSalary, zipCode, filingStatus) {
         ficaTax,
         totalTaxes,
         netSalary,
-        location: localTaxInfo.location
+        location: taxInfo.location
     };
 }
 
@@ -705,84 +708,40 @@ function calculateProgressiveTax(income, brackets) {
     return tax;
 }
 
-// Get comprehensive local tax rates based on ZIP code
-function getLocalTaxRates(zipCode) {
-    let stateTaxRate = 0;
-    let countyTaxRate = 0;
-    let cityTaxRate = 0;
-    let location = 'Unknown';
-    let state = null;
-    let county = null;
-    let city = null;
-    
-    if (!zipCode || zipCode.length !== 5) {
-        // Default to national average if no ZIP provided
+// Get state tax rates based on state code
+function getStateTaxRates(stateCode) {
+    // Default to no state tax if no state provided or invalid state
+    if (!stateCode || !taxRates[stateCode]) {
         return {
-            stateTaxRate: 0.05,
+            stateTaxRate: 0,
             countyTaxRate: 0,
             cityTaxRate: 0,
-            location: 'Default (No ZIP provided)'
+            location: 'No state selected'
         };
     }
     
-    // Try to find exact ZIP match first (using first 3 digits)
-    const zipPrefix = zipCode.substring(0, 3);
-    const locationData = zipToLocation[zipPrefix];
-    
-    if (locationData) {
-        state = locationData.state;
-        county = locationData.county;
-        city = locationData.city;
-        
-        // Get state tax rate
-        const stateInfo = taxRates[state];
-        if (stateInfo) {
-            stateTaxRate = stateInfo.state;
-        }
-        
-        // Get county tax rate if applicable
-        if (county && countyTaxRates[county]) {
-            countyTaxRate = countyTaxRates[county];
-        } else if (stateInfo && stateInfo.county) {
-            // Use state's default county rate
-            countyTaxRate = stateInfo.county;
-        }
-        
-        // Get city tax rate if applicable
-        if (city && cityTaxRates[city]) {
-            cityTaxRate = cityTaxRates[city];
-        } else if (stateInfo && stateInfo.city) {
-            // Use state's default city rate
-            cityTaxRate = stateInfo.city;
-        }
-        
-        // Build location string
-        location = city ? `${city}, ${state}` : `${county} County, ${state}`;
-    } else {
-        // Fallback: determine state from first digit
-        const firstDigit = zipCode[0];
-        const stateByFirstDigit = {
-            '0': 'CT', '1': 'NY', '2': 'DC', '3': 'FL', '4': 'IN',
-            '5': 'IA', '6': 'MO', '7': 'AR', '8': 'AZ', '9': 'CA'
-        };
-        
-        state = stateByFirstDigit[firstDigit] || 'CA';
-        const stateInfo = taxRates[state];
-        
-        if (stateInfo) {
-            stateTaxRate = stateInfo.state;
-            countyTaxRate = stateInfo.county || 0;
-            cityTaxRate = stateInfo.city || 0;
-        }
-        
-        location = `${state} (Estimated)`;
-    }
+    const stateInfo = taxRates[stateCode];
+    const stateNames = {
+        'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
+        'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'DC': 'District of Columbia',
+        'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois',
+        'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana',
+        'ME': 'Maine', 'MD': 'Maryland', 'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota',
+        'MS': 'Mississippi', 'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
+        'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
+        'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma', 'OR': 'Oregon',
+        'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina', 'SD': 'South Dakota',
+        'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont', 'VA': 'Virginia',
+        'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming',
+        'AS': 'American Samoa', 'GU': 'Guam', 'MP': 'Northern Mariana Islands',
+        'PR': 'Puerto Rico', 'VI': 'U.S. Virgin Islands'
+    };
     
     return {
-        stateTaxRate,
-        countyTaxRate,
-        cityTaxRate,
-        location
+        stateTaxRate: stateInfo.state || 0,
+        countyTaxRate: stateInfo.county || 0,
+        cityTaxRate: stateInfo.city || 0,
+        location: stateNames[stateCode] || stateCode
     };
 }
 
