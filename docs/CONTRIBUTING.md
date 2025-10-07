@@ -45,7 +45,7 @@ Thank you for your interest in contributing to this project! This tool helps vet
 
 ### Areas for Contribution
 
-- **ZIP Code Coverage**: Add more specific city/county mappings
+- **State Coverage**: Add more specific county/city tax mappings
 - **Tax Data**: Update tax rates (with sources)
 - **Features**: UI improvements, export functionality
 - **Testing**: Add test cases for edge scenarios
@@ -55,7 +55,7 @@ Thank you for your interest in contributing to this project! This tool helps vet
 
 Before submitting:
 - [ ] Test with various VA ratings (0%, 30%, 70%, 100%)
-- [ ] Test with different ZIP codes
+- [ ] Test with different states and territories
 - [ ] Verify tax calculations are accurate
 - [ ] Check mobile responsiveness
 - [ ] Ensure CSP compliance (no console errors)

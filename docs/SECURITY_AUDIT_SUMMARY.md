@@ -188,7 +188,7 @@ element.innerHTML = userInput; // DANGEROUS
 1. **Input Validation**
    - String sanitization
    - Numeric range validation
-   - Pattern matching (ZIP codes)
+   - State/territory selection validation
    - Type checking
 
 2. **XSS Prevention**
@@ -292,16 +292,16 @@ Before deploying to production:
 5. **CDN**: Consider CDN for DDoS protection
 6. **Performance**: Optimize for Core Web Vitals
 
-### Low Priority
-7. **Analytics**: Add privacy-respecting analytics (optional)
-8. **A/B Testing**: Test different UI variations
-9. **Internationalization**: Support multiple languages
-
 ---
 
-## Known Limitations
+## Areas for Contribution
 
-1. **Client-Side Only**: All security is client-side; no server-side validation
+- **State Coverage**: Add more specific county/city tax mappings
+- **Tax Data**: Update tax rates (with sources)
+- **Features**: UI improvements, export functionality
+- **Testing**: Add test cases for edge scenarios
+- **Documentation**: Improve README or add examples
+- **Internationalization**: Support multiple languages
 2. **Rate Limiting**: Can be bypassed by clearing browser data (acceptable for this use case)
 3. **No Persistence**: Calculations not saved (by design for privacy)
 
@@ -352,4 +352,4 @@ The VA Disability & Salary Calculator has been thoroughly secured against common
 **Audit Date**: October 2025  
 **Auditor**: Dex-Xavier Copeland  
 **Next Review**: January 2026  
-**Version**: 1.0
+**Version**: 1.1
