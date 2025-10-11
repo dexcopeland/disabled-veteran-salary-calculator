@@ -1,6 +1,6 @@
 # VA Disability & Salary Calculator
 
-A comprehensive web application that calculates the gross salary needed to achieve a desired take-home pay, accounting for VA disability compensation and all applicable taxes (federal, state, county, and local).
+A comprehensive web application that calculates the gross salary needed to achieve a desired take-home pay, accounting for VA disability compensation, federal, and state taxes.
 
 ## Features
 
