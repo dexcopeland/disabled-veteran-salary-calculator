@@ -41,7 +41,7 @@ export function VAInfoCard({
 }: VAInfoCardProps) {
   const ratingNum = parseInt(vaRating);
   const spouseEnabled = ratingNum >= 30;
-  const parentEnabled = ratingNum >= 100;
+  const parentEnabled = ratingNum >= 30;
 
   return (
     <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
