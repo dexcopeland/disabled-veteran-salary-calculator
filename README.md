@@ -1,73 +1,52 @@
-# React + TypeScript + Vite
+# VA Disability & Salary Calculator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A tool for disabled veterans to calculate the gross salary needed to reach a desired take-home pay. It factors in **tax-free VA disability compensation** alongside federal, state, and local taxes to reverse-engineer the required salary.
 
-Currently, two official plugins are available:
+## How It Works
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. Enter your **VA disability rating** and dependent information (spouse, children, parents).
+2. Enter your **desired monthly or yearly take-home pay**.
+3. Select your **state**, **city/county** (if applicable), and **filing status**.
+4. Click **Calculate** — the tool uses a binary search to find the gross salary that, after all taxes, plus your VA compensation, equals your target take-home.
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **2026 VA Rates** — Updated with the 2.8% COLA increase (effective Dec 1, 2025).
+- **Progressive State Brackets** — 30 states computed bracket-by-bracket with state standard deductions, not flat-rate estimates.
+- **City/County Taxes** — Locality selector for 8 states (NY, PA, MD, OH, IN, MI, MO, AL) with specific rates for major cities and counties.
+- **Private** — Runs entirely in the browser. No data is stored or sent to any server.
 
-## Expanding the ESLint configuration
+## Limitations
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Estimates only.** This is not a substitute for professional tax advice.
+- **No itemized deductions** — assumes the standard deduction at both federal and state levels.
+- **No pre-tax contributions** — does not account for 401(k), HSA, FSA, or other pre-tax payroll deductions.
+- **No tax credits** — earned income credit, child tax credit, etc. are not factored in.
+- **Local tax coverage is partial** — only major cities/counties in 8 states are listed. Many smaller jurisdictions are not included.
+- **State bracket data** — based on 2025 published rates and may not reflect mid-year legislative changes.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Use It
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+**[Launch the calculator →](https://dexcopeland.github.io/disabled-veteran-salary-calculator/)**
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+No install required — runs in your browser.
+
+## Local Development
+
+If you want to run it locally or contribute:
+
+```bash
+npm install
+npm run dev       # Start dev server
+npm run build     # Production build → dist/
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Built with React, TypeScript, Vite, Tailwind CSS, and [shadcn/ui](https://ui.shadcn.com).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## License
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+MIT License. Free for veterans and their families.
+
+---
+
+**Version**: 2.0 | **Updated**: March 2026 | **VA Rates**: 2026 (Effective Dec 1, 2025)
