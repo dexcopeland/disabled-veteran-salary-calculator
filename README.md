@@ -1,30 +1,73 @@
-# VA Disability & Salary Calculator
+# React + TypeScript + Vite
 
-A web tool that calculates the gross salary needed to match a desired take-home pay, factoring in tax-free VA disability compensation compared to taxable income.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Features
+Currently, two official plugins are available:
 
-- **2026 VA Rates**: Updated with the 2.8% COLA increase (Effective Dec 1, 2025).
-- **Accurate Calculations**: Handles federal, state, and local taxes for all 50 states and territories.
-- **Smart Estimation**: Reverse-calculates required gross salary from your net income goal.
-- **Private**: Client-side only; no data is stored or sent to servers.
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Quick Start
+## React Compiler
 
-1. Open `index.html` in your browser.
-2. Enter your **VA Rating** and dependent details.
-3. Input your **Desired Take-Home Pay**.
-4. Select your **State** and **Filing Status**.
-5. Click **Calculate** to see your required salary and tax breakdown.
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Disclaimer
+## Expanding the ESLint configuration
 
-**Estimates Only**. Rates and tax calculations are based on 2025/2026 data. Always consult a tax professional for financial planning.
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-## License
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-MIT License. Free for veterans and their families.
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
----
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
 
-**Version**: 1.2 | **Updated**: December 2025 | **VA Rates**: 2026 (Effective Dec 1, 2025)
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
