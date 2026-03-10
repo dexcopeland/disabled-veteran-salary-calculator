@@ -43,9 +43,20 @@ npm run build     # Production build → dist/
 
 Built with React, TypeScript, Vite, Tailwind CSS, and [shadcn/ui](https://ui.shadcn.com).
 
+### Contributing
+
+1. Fork the repo → create a feature branch → open a PR.
+2. Tax and VA rate changes must include sources.
+3. All calculations must remain client-side (no server calls).
+4. Test across multiple VA ratings and states before submitting.
+
+**Good areas to contribute:** additional city/county tax data, updated state brackets, accessibility improvements, and test coverage.
+
+Questions? Open an issue or reach out on [LinkedIn](https://www.linkedin.com/in/dexcopeland/) or [GitHub](https://github.com/dexcopeland).
+
 ## License
 
-MIT License. Free for veterans and their families.
+[MIT License](./LICENSE) — free for veterans and their families.
 
 ---
 
