@@ -49,6 +49,22 @@ export function IncomeCard({
   const hasLocalTax = stateCode && taxRates[stateCode]?.hasLocalTax;
   const localities = stateCode ? localTaxOptions[stateCode] || [] : [];
 
+  // Format a numeric string with thousand-separator commas
+  const formatWithCommas = (value: string): string => {
+    const raw = value.replace(/[^0-9.]/g, "");
+    if (!raw) return "";
+    const [intPart, decPart] = raw.split(".");
+    const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return decPart !== undefined ? `${formatted}.${decPart}` : formatted;
+  };
+
+  const displayValue = formatWithCommas(desiredIncome);
+
+  const handleIncomeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/[^0-9.]/g, "");
+    onDesiredIncomeChange(raw);
+  };
+
   return (
     <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
       <CardHeader className="pb-4">
@@ -73,13 +89,11 @@ export function IncomeCard({
             </span>
             <Input
               id="desired-income"
-              type="number"
-              min="0"
-              max="100000000"
-              step="100"
+              type="text"
+              inputMode="decimal"
               placeholder="5,000"
-              value={desiredIncome}
-              onChange={(e) => onDesiredIncomeChange(e.target.value)}
+              value={displayValue}
+              onChange={handleIncomeChange}
               className="pl-7 tabular-nums"
               autoComplete="off"
             />
