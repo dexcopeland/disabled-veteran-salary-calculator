@@ -11,18 +11,25 @@ import {
 
 // --- Types ---
 
+export type CalculationMode = "targetTakeHome" | "knownSalary";
+
 export interface CalculationResult {
+  mode: CalculationMode;
   grossSalary: number;
   federalTax: number;
   stateTax: number;
   localTax: number;
+  socialSecurityTax: number;
+  medicareTax: number;
   ficaTax: number;
   totalTaxes: number;
   netSalary: number;
   vaCompensation: number;
+  totalAnnualTakeHome: number;
   totalMonthlyTakeHome: number;
   location: string;
   localTaxName: string;
+  hasStateIncomeTax: boolean;
 }
 
 // --- Rate Limiting ---
@@ -49,16 +56,36 @@ export function checkRateLimit(): boolean {
 
 // --- Validation ---
 
-export function validateInputs(desiredIncome: number, stateCode: string): void {
-  if (isNaN(desiredIncome) || desiredIncome <= 0) {
-    throw new Error(
-      "Please enter a valid desired take-home pay greater than $0"
-    );
+function inputAmountError(
+  mode: CalculationMode,
+  kind: "empty" | "tooHigh"
+): string {
+  switch (mode) {
+    case "knownSalary":
+      return kind === "empty"
+        ? "Please enter a valid salary or offer greater than $0"
+        : "Salary seems unreasonably high. Please enter a realistic amount.";
+    case "targetTakeHome":
+      return kind === "empty"
+        ? "Please enter a valid desired take-home pay greater than $0"
+        : "Desired income seems unreasonably high. Please enter a realistic amount.";
+    default: {
+      const _exhaustive: never = mode;
+      throw new Error(`Unhandled calculation mode: ${_exhaustive}`);
+    }
   }
-  if (desiredIncome > 100000000) {
-    throw new Error(
-      "Desired income seems unreasonably high. Please enter a realistic amount."
-    );
+}
+
+export function validateInputs(
+  amount: number,
+  stateCode: string,
+  mode: CalculationMode = "targetTakeHome"
+): void {
+  if (isNaN(amount) || amount <= 0) {
+    throw new Error(inputAmountError(mode, "empty"));
+  }
+  if (amount > 100000000) {
+    throw new Error(inputAmountError(mode, "tooHigh"));
   }
   if (stateCode && !taxRates[stateCode]) {
     throw new Error("Please select a valid state or territory");
@@ -179,10 +206,13 @@ function getStateTaxInfo(stateCode: string) {
   if (!stateCode || !taxRates[stateCode]) {
     return {
       location: "No state selected",
+      hasStateIncomeTax: false,
     };
   }
+  const info = taxRates[stateCode];
   return {
     location: stateNames[stateCode] || stateCode,
+    hasStateIncomeTax: info.progressive || info.state > 0,
   };
 }
 
@@ -192,14 +222,15 @@ function calculateTaxes(
   filingStatus: FilingStatus,
   localityName: string
 ) {
-  // FICA
+  // FICA — Social Security + Medicare (employee share)
   const socialSecurityTax = Math.min(grossSalary, 168600) * 0.062;
-  const medicareTax = grossSalary * 0.0145;
+  const baseMedicareTax = grossSalary * 0.0145;
   const additionalMedicareTax =
     filingStatus === "marriedJoint" && grossSalary > 250000
       ? (grossSalary - 250000) * 0.009
       : 0;
-  const ficaTax = socialSecurityTax + medicareTax + additionalMedicareTax;
+  const medicareTax = baseMedicareTax + additionalMedicareTax;
+  const ficaTax = socialSecurityTax + medicareTax;
 
   // Federal tax
   const federalDeduction = standardDeductions[filingStatus] || 0;
@@ -225,11 +256,46 @@ function calculateTaxes(
     federalTax,
     stateTax,
     localTax,
+    socialSecurityTax,
+    medicareTax,
     ficaTax,
     totalTaxes,
     netSalary,
     location: info.location,
     localTaxName: localityName || "",
+    hasStateIncomeTax: info.hasStateIncomeTax,
+  };
+}
+
+function emptyTaxResult(stateCode: string, localityName: string) {
+  const info = getStateTaxInfo(stateCode);
+  return {
+    federalTax: 0,
+    stateTax: 0,
+    localTax: 0,
+    socialSecurityTax: 0,
+    medicareTax: 0,
+    ficaTax: 0,
+    netSalary: 0,
+    totalTaxes: 0,
+    location: info.location,
+    localTaxName: localityName || "",
+    hasStateIncomeTax: info.hasStateIncomeTax,
+  };
+}
+
+function withVaTotals(
+  result: ReturnType<typeof calculateTaxes> & { grossSalary: number },
+  vaAnnualCompensation: number,
+  mode: CalculationMode
+): CalculationResult {
+  const totalAnnualTakeHome = result.netSalary + vaAnnualCompensation;
+  return {
+    ...result,
+    mode,
+    vaCompensation: vaAnnualCompensation,
+    totalAnnualTakeHome,
+    totalMonthlyTakeHome: totalAnnualTakeHome / 12,
   };
 }
 
@@ -246,33 +312,18 @@ export function calculateRequiredSalary(
   const targetAfterTaxSalary = desiredAnnualTakeHome - vaAnnualCompensation;
 
   if (targetAfterTaxSalary <= 0) {
-    return {
-      grossSalary: 0,
-      federalTax: 0,
-      stateTax: 0,
-      localTax: 0,
-      ficaTax: 0,
-      netSalary: 0,
-      totalTaxes: 0,
-      vaCompensation: vaAnnualCompensation,
-      totalMonthlyTakeHome: vaAnnualCompensation / 12,
-      location: getStateTaxInfo(stateCode).location,
-      localTaxName: localityName || "",
-    };
+    return withVaTotals(
+      { ...emptyTaxResult(stateCode, localityName), grossSalary: 0 },
+      vaAnnualCompensation,
+      "targetTakeHome"
+    );
   }
 
   let low = 0;
   let high = desiredAnnualTakeHome * 2;
   let result = {
+    ...emptyTaxResult(stateCode, localityName),
     grossSalary: 0,
-    federalTax: 0,
-    stateTax: 0,
-    localTax: 0,
-    ficaTax: 0,
-    netSalary: 0,
-    totalTaxes: 0,
-    location: "",
-    localTaxName: "",
   };
 
   for (let i = 0; i < 50; i++) {
@@ -296,11 +347,29 @@ export function calculateRequiredSalary(
     }
   }
 
-  return {
-    ...result,
-    vaCompensation: vaAnnualCompensation,
-    totalMonthlyTakeHome: (result.netSalary + vaAnnualCompensation) / 12,
-  };
+  return withVaTotals(result, vaAnnualCompensation, "targetTakeHome");
+}
+
+export function calculateTakeHomeFromSalary(
+  annualGrossSalary: number,
+  vaMonthlyCompensation: number,
+  stateCode: string,
+  filingStatus: FilingStatus,
+  localityName: string
+): CalculationResult {
+  const vaAnnualCompensation = vaMonthlyCompensation * 12;
+  const taxes = calculateTaxes(
+    annualGrossSalary,
+    stateCode,
+    filingStatus,
+    localityName
+  );
+
+  return withVaTotals(
+    { ...taxes, grossSalary: annualGrossSalary },
+    vaAnnualCompensation,
+    "knownSalary"
+  );
 }
 
 // --- Formatting ---

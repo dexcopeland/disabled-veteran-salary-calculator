@@ -1,12 +1,14 @@
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -14,15 +16,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { DollarSign, Calculator, MapPin } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Calculator, DollarSign, MapPin } from "lucide-react";
 import { stateOptions, taxRates, localTaxOptions } from "@/lib/tax-data";
+import type { CalculationMode } from "@/lib/calculator";
 
 interface IncomeCardProps {
+  mode: CalculationMode;
   desiredIncome: string;
   payPeriod: string;
   stateCode: string;
   filingStatus: string;
   localityName: string;
+  onModeChange: (value: CalculationMode) => void;
   onDesiredIncomeChange: (value: string) => void;
   onPayPeriodChange: (value: string) => void;
   onStateCodeChange: (value: string) => void;
@@ -32,12 +38,18 @@ interface IncomeCardProps {
   isCalculating: boolean;
 }
 
+function isCalculationMode(value: string): value is CalculationMode {
+  return value === "targetTakeHome" || value === "knownSalary";
+}
+
 export function IncomeCard({
+  mode,
   desiredIncome,
   payPeriod,
   stateCode,
   filingStatus,
   localityName,
+  onModeChange,
   onDesiredIncomeChange,
   onPayPeriodChange,
   onStateCodeChange,
@@ -48,8 +60,8 @@ export function IncomeCard({
 }: IncomeCardProps) {
   const hasLocalTax = stateCode && taxRates[stateCode]?.hasLocalTax;
   const localities = stateCode ? localTaxOptions[stateCode] || [] : [];
+  const isKnownSalary = mode === "knownSalary";
 
-  // Format a numeric string with thousand-separator commas
   const formatWithCommas = (value: string): string => {
     const raw = value.replace(/[^0-9.]/g, "");
     if (!raw) return "";
@@ -65,57 +77,119 @@ export function IncomeCard({
     onDesiredIncomeChange(raw);
   };
 
+  const amountLabel = isKnownSalary
+    ? payPeriod === "yearly"
+      ? "Annual salary / offer"
+      : "Salary / offer"
+    : "Desired take-home pay";
+
+  const amountPlaceholder = isKnownSalary
+    ? payPeriod === "yearly"
+      ? "75,000"
+      : "6,250"
+    : payPeriod === "yearly"
+      ? "60,000"
+      : "5,000";
+
+  const amountHelp = isKnownSalary
+    ? "Enter the job or offer amount. VA disability is tax-free and added after estimated taxes."
+    : "The take-home you want, including tax-free VA disability compensation.";
+
+  const calculateLabel = isKnownSalary
+    ? "Estimate take-home"
+    : "Calculate required salary";
+
   return (
     <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2.5 text-base font-semibold tracking-tight">
-          <div className="flex items-center justify-center h-7 w-7 rounded-md bg-emerald-500/10 text-emerald-500">
-            <DollarSign className="h-4 w-4" />
+          <div className="flex size-7 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-500">
+            <DollarSign className="size-4" />
           </div>
           Income Information
         </CardTitle>
+        <CardDescription>
+          Choose whether you know a target take-home or a salary / offer.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
-        <div className="space-y-2">
+      <CardContent className="flex flex-col gap-5">
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-sm text-muted-foreground">
+            What do you know?
+          </legend>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            spacing={2}
+            value={mode}
+            onValueChange={(value) => {
+              if (isCalculationMode(value)) {
+                onModeChange(value);
+              }
+            }}
+            className="grid w-full grid-cols-1 sm:grid-cols-2"
+            aria-label="Calculation mode"
+          >
+            <ToggleGroupItem
+              value="targetTakeHome"
+              aria-label="I know my target take-home"
+              className="h-auto min-h-9 w-full whitespace-normal px-3 py-2 text-left"
+            >
+              I know my target take-home
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="knownSalary"
+              aria-label="I know my salary or offer"
+              className="h-auto min-h-9 w-full whitespace-normal px-3 py-2 text-left"
+            >
+              I know my salary / offer
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </fieldset>
+
+        <div className="flex flex-col gap-2">
           <Label
-            htmlFor="desired-income"
+            htmlFor="income-amount"
             className="text-sm text-muted-foreground"
           >
-            Desired Take-Home Pay
+            {amountLabel}
           </Label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
               $
             </span>
             <Input
-              id="desired-income"
+              id="income-amount"
               type="text"
               inputMode="decimal"
-              placeholder="5,000"
+              placeholder={amountPlaceholder}
               value={displayValue}
               onChange={handleIncomeChange}
               className="pl-7 tabular-nums"
               autoComplete="off"
             />
           </div>
+          <p className="text-[11px] text-muted-foreground/70">{amountHelp}</p>
         </div>
 
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <Label htmlFor="pay-period" className="text-sm text-muted-foreground">
-            Pay Period
+            Pay period
           </Label>
           <Select value={payPeriod} onValueChange={onPayPeriodChange}>
             <SelectTrigger id="pay-period" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="monthly">Monthly</SelectItem>
-              <SelectItem value="yearly">Yearly</SelectItem>
+              <SelectGroup>
+                <SelectItem value="monthly">Monthly</SelectItem>
+                <SelectItem value="yearly">Yearly</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </div>
 
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <Label
             htmlFor="state-select"
             className="text-sm text-muted-foreground"
@@ -127,23 +201,24 @@ export function IncomeCard({
               <SelectValue placeholder="Select state" />
             </SelectTrigger>
             <SelectContent>
-              {stateOptions.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                {stateOptions.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Locality selector — only shown for states with local taxes */}
         {hasLocalTax && localities.length > 0 && (
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label
               htmlFor="locality-select"
-              className="text-sm text-muted-foreground flex items-center gap-1.5"
+              className="flex items-center gap-1.5 text-sm text-muted-foreground"
             >
-              <MapPin className="h-3 w-3" />
+              <MapPin className="size-3" />
               City / County
             </Label>
             <Select value={localityName} onValueChange={onLocalityChange}>
@@ -151,16 +226,18 @@ export function IncomeCard({
                 <SelectValue placeholder="Select locality (optional)" />
               </SelectTrigger>
               <SelectContent>
-                {localities.map((loc) => (
-                  <SelectItem key={loc.name} value={loc.name}>
-                    {loc.name}
-                    {loc.rate > 0 && (
-                      <span className="text-muted-foreground ml-1">
-                        ({(loc.rate * 100).toFixed(2)}%)
-                      </span>
-                    )}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  {localities.map((loc) => (
+                    <SelectItem key={loc.name} value={loc.name}>
+                      {loc.name}
+                      {loc.rate > 0 && (
+                        <span className="ml-1 text-muted-foreground">
+                          ({(loc.rate * 100).toFixed(2)}%)
+                        </span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             <p className="text-[11px] text-muted-foreground/60">
@@ -169,7 +246,7 @@ export function IncomeCard({
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <Label
             htmlFor="filing-status"
             className="text-sm text-muted-foreground"
@@ -181,16 +258,18 @@ export function IncomeCard({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="single">Single</SelectItem>
-              <SelectItem value="marriedJoint">
-                Married Filing Jointly
-              </SelectItem>
-              <SelectItem value="marriedSeparate">
-                Married Filing Separately
-              </SelectItem>
-              <SelectItem value="headOfHousehold">
-                Head of Household
-              </SelectItem>
+              <SelectGroup>
+                <SelectItem value="single">Single</SelectItem>
+                <SelectItem value="marriedJoint">
+                  Married Filing Jointly
+                </SelectItem>
+                <SelectItem value="marriedSeparate">
+                  Married Filing Separately
+                </SelectItem>
+                <SelectItem value="headOfHousehold">
+                  Head of Household
+                </SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </div>
@@ -198,11 +277,11 @@ export function IncomeCard({
         <Button
           onClick={onCalculate}
           disabled={isCalculating}
-          className="w-full mt-2 cursor-pointer"
+          className="mt-2 w-full cursor-pointer"
           size="lg"
         >
-          <Calculator className="h-4 w-4 mr-2" />
-          {isCalculating ? "Calculating..." : "Calculate"}
+          <Calculator data-icon="inline-start" />
+          {isCalculating ? "Calculating..." : calculateLabel}
         </Button>
       </CardContent>
     </Card>
