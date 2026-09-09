@@ -122,6 +122,43 @@ describe("calculateTakeHomeFromSalary", () => {
     );
   });
 
+  it("applies Additional Medicare Tax using the IRS threshold for each filing status", () => {
+    const singleOver = calculateTakeHomeFromSalary(
+      220_000,
+      0,
+      "TX",
+      "single",
+      ""
+    );
+    const marriedUnderJointThreshold = calculateTakeHomeFromSalary(
+      220_000,
+      0,
+      "TX",
+      "marriedJoint",
+      ""
+    );
+    const marriedSeparateOver = calculateTakeHomeFromSalary(
+      145_000,
+      0,
+      "TX",
+      "marriedSeparate",
+      ""
+    );
+
+    expect(singleOver.medicareTax).toBeCloseTo(
+      220_000 * 0.0145 + 20_000 * 0.009,
+      5
+    );
+    expect(marriedUnderJointThreshold.medicareTax).toBeCloseTo(
+      220_000 * 0.0145,
+      5
+    );
+    expect(marriedSeparateOver.medicareTax).toBeCloseTo(
+      145_000 * 0.0145 + 20_000 * 0.009,
+      5
+    );
+  });
+
   it("uses married-joint brackets for a lower federal bill than single at the same salary", () => {
     const single = calculateTakeHomeFromSalary(
       120_000,

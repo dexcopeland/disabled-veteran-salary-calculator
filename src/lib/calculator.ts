@@ -216,6 +216,22 @@ function getStateTaxInfo(stateCode: string) {
   };
 }
 
+function additionalMedicareWageThreshold(filingStatus: FilingStatus): number {
+  switch (filingStatus) {
+    case "marriedJoint":
+      return 250000;
+    case "marriedSeparate":
+      return 125000;
+    case "single":
+    case "headOfHousehold":
+      return 200000;
+    default: {
+      const _exhaustive: never = filingStatus;
+      throw new Error(`Unhandled filing status: ${_exhaustive}`);
+    }
+  }
+}
+
 function calculateTaxes(
   grossSalary: number,
   stateCode: string,
@@ -225,9 +241,11 @@ function calculateTaxes(
   // FICA — Social Security + Medicare (employee share)
   const socialSecurityTax = Math.min(grossSalary, 168600) * 0.062;
   const baseMedicareTax = grossSalary * 0.0145;
+  const additionalMedicareThreshold =
+    additionalMedicareWageThreshold(filingStatus);
   const additionalMedicareTax =
-    filingStatus === "marriedJoint" && grossSalary > 250000
-      ? (grossSalary - 250000) * 0.009
+    grossSalary > additionalMedicareThreshold
+      ? (grossSalary - additionalMedicareThreshold) * 0.009
       : 0;
   const medicareTax = baseMedicareTax + additionalMedicareTax;
   const ficaTax = socialSecurityTax + medicareTax;
