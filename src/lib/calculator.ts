@@ -216,6 +216,8 @@ function getStateTaxInfo(stateCode: string) {
   };
 }
 
+// Additional Medicare Tax (0.9%) wage thresholds — IRS Form 8959 / Pub. 15
+// https://www.irs.gov/businesses/small-businesses-self-employed/questions-and-answers-for-the-additional-medicare-tax
 function additionalMedicareWageThreshold(filingStatus: FilingStatus): number {
   switch (filingStatus) {
     case "marriedJoint":
