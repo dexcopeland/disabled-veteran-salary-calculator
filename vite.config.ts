@@ -6,7 +6,12 @@ import tailwindcss from "@tailwindcss/vite"
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: "/disabled-veteran-salary-calculator/",
+  // GitHub Pages is served from /disabled-veteran-salary-calculator/.
+  // Cloudflare Workers Builds injects WORKERS_CI=1 and serves from the root.
+  base:
+    process.env.WORKERS_CI === "1"
+      ? "/"
+      : "/disabled-veteran-salary-calculator/",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

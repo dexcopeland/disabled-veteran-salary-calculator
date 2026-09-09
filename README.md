@@ -50,6 +50,8 @@ npm test          # Calculator unit tests
 npm run build     # Production build → dist/
 ```
 
+The app is a static Vite build. GitHub Pages serves it from `/disabled-veteran-salary-calculator/`. Cloudflare Workers Builds (when connected) uses `wrangler.jsonc` to publish the same `dist/` folder as a single-page Worker.
+
 Built with React, TypeScript, Vite, Tailwind CSS, and [shadcn/ui](https://ui.shadcn.com).
 
 ### Contributing
