@@ -1,0 +1,14 @@
+{
+  // Static-asset Worker for Cloudflare Workers Builds.
+  // Does not use the Vite Cloudflare plugin so `npm run build` still
+  // writes GitHub Pages-compatible files to dist/.
+  "name": "disabled-veteran-salary-calculator",
+  "compatibility_date": "2026-05-21",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
