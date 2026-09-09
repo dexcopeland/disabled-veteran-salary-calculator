@@ -8,15 +8,17 @@ A tool for disabled veterans to estimate take-home pay two ways: reverse-enginee
 2. Choose a mode:
    - **I know my target take-home** — enter the monthly or yearly take-home you want. The tool uses a binary search to find the gross salary that, after estimated taxes plus VA compensation, equals that target.
    - **I know my salary / offer** — enter a job or offer amount. The same tax engine estimates federal, state, local, and FICA withholding, then adds tax-free VA compensation to show take-home.
-3. Select your **state**, **city/county** (if applicable), and **filing status**.
-4. Click **Calculate required salary** or **Estimate take-home**.
+3. Select your **state** and **city/county** (if applicable).
+4. Enter **Current Federal Withholding** (W-4 marital status, Step 2c, Step 3 dependents amount, Step 4a/4b, additional annual withholding) and **Current {State} Withholding** (Maryland-style exemptions where modeled).
+5. Click **Calculate required salary** or **Estimate take-home**.
 
 Both modes use the same client-side tax engine, so a salary and the take-home it produces should agree if you switch modes.
 
 ## Features
 
 - **Two calculation modes** — target take-home → required salary, or known salary / offer → estimated take-home.
-- **Clear withholding breakdown** — federal income tax, state income tax, local tax (when selected), Social Security, and Medicare, with monthly equivalents.
+- **W-4 / state withholding settings** — paycheck-style federal withholding from Form W-4 fields (Pub 15-T percentage method, using this app's brackets) and Maryland MW507 exemptions ($3,200 each). Other states get marital status plus additional withholding.
+- **Clear withholding breakdown** — federal, state, local (when selected), Social Security, and Medicare, with monthly equivalents.
 - **2026 VA Rates** — Updated with the 2.8% COLA increase (effective Dec 1, 2025).
 - **Progressive State Brackets** — 30 states computed bracket-by-bracket with state standard deductions, not flat-rate estimates.
 - **City/County Taxes** — Locality selector for 8 states (NY, PA, MD, OH, IN, MI, MO, AL) with specific rates for major cities and counties.
@@ -25,11 +27,13 @@ Both modes use the same client-side tax engine, so a salary and the take-home it
 ## Limitations
 
 - **Estimates only.** This is not a substitute for a W-2, a tax professional, or your employer's payroll withholding.
-- **Withholding ≈ annual liability.** Federal and state lines are this calculator's estimated annual tax, shown as expected withholding. They are not a full IRS W-4 or state W-4 simulation, so a real paycheck can differ (extra withholding, allowances, supplemental wages, etc.).
+- **Not a full payroll / official W-4 or MW507 simulator.** Federal withholding is a Pub 15-T–style annual percentage-method approximation (half standard deduction if Step 2c is checked; Step 3 subtracted as a credit; Step 4a/4b/4c applied). It does not implement every Publication 15-T worksheet, paycheck frequency table, or dual-job worksheet.
+- **Maryland exemptions** use $3,200 each per 2026 Comptroller withholding facts. MAGI phaseouts and extra age/blind exemptions are not modeled. Other states use this app's existing tax engine plus optional extra withholding — not each state's official certificate.
+- **Additional Amt Withheld** is entered as an **annual** extra amount, then included in the yearly withholding total.
 - **FICA is included** (Social Security + Medicare employee share) so take-home is not just income tax. It does not include employer FICA or most other payroll deductions.
-- **No itemized deductions** — assumes the standard deduction at both federal and state levels.
+- **No itemized deductions** beyond W-4 Step 4b — otherwise assumes the standard deduction at both federal and state levels.
 - **No pre-tax contributions** — does not account for 401(k), HSA, FSA, or other pre-tax payroll deductions.
-- **No tax credits** — earned income credit, child tax credit, etc. are not factored in.
+- **No tax credits** beyond the W-4 Step 3 amount you type — earned income credit, etc. are not auto-calculated.
 - **Local tax coverage is partial** — only major cities/counties in 8 states are listed. Many smaller jurisdictions are not included.
 - **State bracket data** — based on 2025 published rates and may not reflect mid-year legislative changes.
 

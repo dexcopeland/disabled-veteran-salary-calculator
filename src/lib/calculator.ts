@@ -1,13 +1,20 @@
 import { vaRates } from "./va-rates";
 import {
   taxRates,
-  federalTaxBrackets,
-  standardDeductions,
   stateNames,
   localTaxOptions,
   type FilingStatus,
-  type TaxBracket,
 } from "./tax-data";
+import { stateHasIncomeTax } from "./tax-math";
+import {
+  calculateFederalWithholding,
+  calculateStateWithholding,
+  defaultWithholdingSettings,
+  type WithholdingSettings,
+} from "./withholding";
+
+export type { WithholdingSettings } from "./withholding";
+export { defaultWithholdingSettings } from "./withholding";
 
 // --- Types ---
 
@@ -136,60 +143,6 @@ export function calculateVACompensation(
   return compensation;
 }
 
-// --- Tax Calculations ---
-
-function calculateProgressiveTax(income: number, brackets: TaxBracket[]): number {
-  let tax = 0;
-  let remaining = income;
-
-  for (const bracket of brackets) {
-    if (remaining <= 0) break;
-    const taxableAmount = Math.min(remaining, bracket.max - bracket.min + 1);
-    tax += taxableAmount * bracket.rate;
-    remaining -= taxableAmount;
-  }
-
-  return tax;
-}
-
-/**
- * Calculate state income tax using progressive brackets when available,
- * falling back to flat rate multiplication.
- */
-function calculateStateTax(
-  grossSalary: number,
-  stateCode: string,
-  filingStatus: FilingStatus
-): number {
-  const stateInfo = taxRates[stateCode];
-  if (!stateInfo) return 0;
-
-  // If the state has progressive brackets, use them
-  if (stateInfo.progressive && stateInfo.brackets) {
-    // Determine which bracket set to use
-    const brackets =
-      stateInfo.brackets[filingStatus] ||
-      stateInfo.brackets.single ||
-      null;
-
-    if (brackets) {
-      // Apply state-level standard deduction if available
-      let taxableIncome = grossSalary;
-      if (stateInfo.standardDeduction) {
-        const deduction =
-          stateInfo.standardDeduction[filingStatus] ||
-          stateInfo.standardDeduction.single ||
-          0;
-        taxableIncome = Math.max(0, grossSalary - deduction);
-      }
-      return calculateProgressiveTax(taxableIncome, brackets);
-    }
-  }
-
-  // Flat-rate fallback
-  return grossSalary * stateInfo.state;
-}
-
 /**
  * Get the local tax rate for a specific locality selection.
  * If no locality is selected, returns 0.
@@ -209,10 +162,9 @@ function getStateTaxInfo(stateCode: string) {
       hasStateIncomeTax: false,
     };
   }
-  const info = taxRates[stateCode];
   return {
     location: stateNames[stateCode] || stateCode,
-    hasStateIncomeTax: info.progressive || info.state > 0,
+    hasStateIncomeTax: stateHasIncomeTax(stateCode),
   };
 }
 
@@ -238,7 +190,8 @@ function calculateTaxes(
   grossSalary: number,
   stateCode: string,
   filingStatus: FilingStatus,
-  localityName: string
+  localityName: string,
+  withholding: WithholdingSettings = defaultWithholdingSettings(filingStatus)
 ) {
   // FICA — Social Security + Medicare (employee share)
   const socialSecurityTax = Math.min(grossSalary, 168600) * 0.062;
@@ -252,16 +205,14 @@ function calculateTaxes(
   const medicareTax = baseMedicareTax + additionalMedicareTax;
   const ficaTax = socialSecurityTax + medicareTax;
 
-  // Federal tax
-  const federalDeduction = standardDeductions[filingStatus] || 0;
-  const federalTaxableIncome = Math.max(0, grossSalary - federalDeduction);
-  const federalTax = calculateProgressiveTax(
-    federalTaxableIncome,
-    federalTaxBrackets[filingStatus]
-  );
+  const settings: WithholdingSettings = {
+    ...withholding,
+    federalFilingStatus: withholding.federalFilingStatus || filingStatus,
+    stateFilingStatus: withholding.stateFilingStatus || filingStatus,
+  };
 
-  // State tax (progressive or flat)
-  const stateTax = calculateStateTax(grossSalary, stateCode, filingStatus);
+  const federalTax = calculateFederalWithholding(grossSalary, settings);
+  const stateTax = calculateStateWithholding(grossSalary, stateCode, settings);
 
   // Local tax
   const localTaxRate = getLocalTaxRate(stateCode, localityName);
@@ -326,7 +277,8 @@ export function calculateRequiredSalary(
   vaMonthlyCompensation: number,
   stateCode: string,
   filingStatus: FilingStatus,
-  localityName: string
+  localityName: string,
+  withholding: WithholdingSettings = defaultWithholdingSettings(filingStatus)
 ): CalculationResult {
   const vaAnnualCompensation = vaMonthlyCompensation * 12;
   const targetAfterTaxSalary = desiredAnnualTakeHome - vaAnnualCompensation;
@@ -348,7 +300,13 @@ export function calculateRequiredSalary(
 
   for (let i = 0; i < 50; i++) {
     const mid = Math.floor((low + high) / 2);
-    const calc = calculateTaxes(mid, stateCode, filingStatus, localityName);
+    const calc = calculateTaxes(
+      mid,
+      stateCode,
+      filingStatus,
+      localityName,
+      withholding
+    );
     const currentNet = mid - calc.totalTaxes;
     const difference = currentNet - targetAfterTaxSalary;
 
@@ -375,14 +333,16 @@ export function calculateTakeHomeFromSalary(
   vaMonthlyCompensation: number,
   stateCode: string,
   filingStatus: FilingStatus,
-  localityName: string
+  localityName: string,
+  withholding: WithholdingSettings = defaultWithholdingSettings(filingStatus)
 ): CalculationResult {
   const vaAnnualCompensation = vaMonthlyCompensation * 12;
   const taxes = calculateTaxes(
     annualGrossSalary,
     stateCode,
     filingStatus,
-    localityName
+    localityName,
+    withholding
   );
 
   return withVaTotals(

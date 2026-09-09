@@ -2,16 +2,21 @@ import { useState, useCallback } from "react";
 import { CreatorBanner } from "@/components/creator-banner";
 import { VAInfoCard } from "@/components/va-info-card";
 import { IncomeCard } from "@/components/income-card";
+import { WithholdingCard, type WithholdingFormValues } from "@/components/withholding-card";
 import { ResultsCard } from "@/components/results-card";
 import { DisclaimerFooter } from "@/components/disclaimer-footer";
+import { Button } from "@/components/ui/button";
+import { Calculator } from "lucide-react";
 import {
   calculateVACompensation,
   calculateRequiredSalary,
   calculateTakeHomeFromSalary,
   checkRateLimit,
   validateInputs,
+  defaultWithholdingSettings,
   type CalculationMode,
   type CalculationResult,
+  type WithholdingSettings,
 } from "@/lib/calculator";
 import type { FilingStatus } from "@/lib/tax-data";
 
@@ -21,19 +26,60 @@ function headerCopy(mode: CalculationMode): { title: string; subtitle: string } 
       return {
         title: "VA Disability & Salary Calculator",
         subtitle:
-          "Enter a job or offer salary to estimate take-home pay after federal, state, and FICA withholding — plus tax-free VA disability.",
+          "Enter a job or offer salary and W-4 / state withholding settings to estimate take-home pay — plus tax-free VA disability.",
       };
     case "targetTakeHome":
       return {
         title: "VA Disability & Salary Calculator",
         subtitle:
-          "Calculate the gross salary needed to reach a target take-home, factoring in tax-free VA disability compensation.",
+          "Calculate the gross salary needed to reach a target take-home, using paycheck-style withholding plus tax-free VA disability.",
       };
     default: {
       const _exhaustive: never = mode;
       throw new Error(`Unhandled calculation mode: ${_exhaustive}`);
     }
   }
+}
+
+function emptyWithholdingForm(
+  filingStatus: FilingStatus = "single"
+): WithholdingFormValues {
+  return {
+    federalFilingStatus: filingStatus,
+    twoJobs: false,
+    dependentsCredit: "0",
+    otherIncome: "0",
+    deductions: "0",
+    additionalFederalAnnual: "0",
+    stateFilingStatus: filingStatus,
+    stateExemptions: "0",
+    additionalStateAnnual: "0",
+  };
+}
+
+function parseAmount(value: string): number {
+  const parsed = parseFloat(value.replace(/,/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toWithholdingSettings(
+  form: WithholdingFormValues
+): WithholdingSettings {
+  return {
+    ...defaultWithholdingSettings(form.federalFilingStatus),
+    federalFilingStatus: form.federalFilingStatus,
+    twoJobs: form.twoJobs,
+    dependentsCredit: Math.max(0, parseAmount(form.dependentsCredit)),
+    otherIncome: Math.max(0, parseAmount(form.otherIncome)),
+    deductions: Math.max(0, parseAmount(form.deductions)),
+    additionalFederalAnnual: Math.max(
+      0,
+      parseAmount(form.additionalFederalAnnual)
+    ),
+    stateFilingStatus: form.stateFilingStatus,
+    stateExemptions: Math.max(0, parseInt(form.stateExemptions, 10) || 0),
+    additionalStateAnnual: Math.max(0, parseAmount(form.additionalStateAnnual)),
+  };
 }
 
 export default function App() {
@@ -46,8 +92,10 @@ export default function App() {
   const [desiredIncome, setDesiredIncome] = useState("");
   const [payPeriod, setPayPeriod] = useState("monthly");
   const [stateCode, setStateCode] = useState("");
-  const [filingStatus, setFilingStatus] = useState("single");
   const [localityName, setLocalityName] = useState("");
+  const [withholdingForm, setWithholdingForm] = useState<WithholdingFormValues>(
+    emptyWithholdingForm()
+  );
 
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [vaMonthlyComp, setVaMonthlyComp] = useState(0);
@@ -91,6 +139,8 @@ export default function App() {
         validateInputs(income, stateCode, mode);
 
         const annualIncome = payPeriod === "monthly" ? income * 12 : income;
+        const withholding = toWithholdingSettings(withholdingForm);
+        const filingStatus = withholding.federalFilingStatus;
 
         const rating = parseInt(vaRating);
         const deps = parseInt(dependents);
@@ -111,8 +161,9 @@ export default function App() {
               annualIncome,
               vaComp,
               stateCode,
-              filingStatus as FilingStatus,
-              localityName
+              filingStatus,
+              localityName,
+              withholding
             );
             break;
           case "targetTakeHome":
@@ -120,8 +171,9 @@ export default function App() {
               annualIncome,
               vaComp,
               stateCode,
-              filingStatus as FilingStatus,
-              localityName
+              filingStatus,
+              localityName,
+              withholding
             );
             break;
           default: {
@@ -147,9 +199,9 @@ export default function App() {
     hasSpouse,
     hasDependentParent,
     stateCode,
-    filingStatus,
     localityName,
     mode,
+    withholdingForm,
   ]);
 
   const copy = headerCopy(mode);
@@ -185,17 +237,31 @@ export default function App() {
               desiredIncome={desiredIncome}
               payPeriod={payPeriod}
               stateCode={stateCode}
-              filingStatus={filingStatus}
               localityName={localityName}
               onModeChange={handleModeChange}
               onDesiredIncomeChange={setDesiredIncome}
               onPayPeriodChange={setPayPeriod}
               onStateCodeChange={handleStateCodeChange}
-              onFilingStatusChange={setFilingStatus}
               onLocalityChange={setLocalityName}
-              onCalculate={handleCalculate}
-              isCalculating={isCalculating}
             />
+            <WithholdingCard
+              stateCode={stateCode}
+              values={withholdingForm}
+              onChange={setWithholdingForm}
+            />
+            <Button
+              onClick={handleCalculate}
+              disabled={isCalculating}
+              className="w-full cursor-pointer"
+              size="lg"
+            >
+              <Calculator data-icon="inline-start" />
+              {isCalculating
+                ? "Calculating..."
+                : mode === "knownSalary"
+                  ? "Estimate take-home"
+                  : "Calculate required salary"}
+            </Button>
           </div>
 
           <div className="lg:sticky lg:top-6 lg:self-start">

@@ -105,13 +105,12 @@ export function ResultsCard({
               <Receipt className="size-5 text-muted-foreground/50" />
             </div>
             <p className="text-sm text-muted-foreground/70">
-              Enter your information and click{" "}
+              Enter income and withholding settings, then click{" "}
               <span className="font-medium text-muted-foreground">
                 {mode === "knownSalary"
                   ? "Estimate take-home"
                   : "Calculate required salary"}
-              </span>{" "}
-              to see federal and state withholding
+              </span>
             </p>
           </div>
         </CardContent>
@@ -138,8 +137,8 @@ export function ResultsCard({
         </CardTitle>
         <CardDescription>
           {isKnownSalary
-            ? "What this salary plus tax-free VA compensation could take home after estimated taxes."
-            : "The gross salary that, after estimated taxes plus VA compensation, reaches your target."}
+            ? "What this salary plus tax-free VA compensation could take home after paycheck-style federal and state withholding."
+            : "The gross salary that, after paycheck-style withholding plus VA compensation, reaches your target."}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-1">
@@ -199,16 +198,17 @@ export function ResultsCard({
           )}
         </div>
         <p className="mb-1 text-[11px] leading-relaxed text-muted-foreground/70">
-          Annual tax liability this calculator expects to be withheld — not a
-          W-4 or paycheck simulator. Actual withholding can differ.
+          Paycheck-style estimate from your W-4 / state certificate fields and
+          this app's tax tables — not a full payroll system. Actual
+          paystubs can differ.
         </p>
         <ResultRow
-          label="Federal income tax"
+          label="Federal withholding"
           value={formatCurrency(result.federalTax, 0)}
           detail={withholdingDetail(result.federalTax, result.grossSalary)}
         />
         <ResultRow
-          label="State income tax"
+          label="State withholding"
           value={formatCurrency(result.stateTax, 0)}
           detail={stateDetail}
         />

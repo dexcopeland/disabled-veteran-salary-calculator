@@ -15,9 +15,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Calculator, DollarSign, MapPin } from "lucide-react";
+import { DollarSign, MapPin } from "lucide-react";
 import { stateOptions, taxRates, localTaxOptions } from "@/lib/tax-data";
 import type { CalculationMode } from "@/lib/calculator";
 
@@ -26,16 +25,12 @@ interface IncomeCardProps {
   desiredIncome: string;
   payPeriod: string;
   stateCode: string;
-  filingStatus: string;
   localityName: string;
   onModeChange: (value: CalculationMode) => void;
   onDesiredIncomeChange: (value: string) => void;
   onPayPeriodChange: (value: string) => void;
   onStateCodeChange: (value: string) => void;
-  onFilingStatusChange: (value: string) => void;
   onLocalityChange: (value: string) => void;
-  onCalculate: () => void;
-  isCalculating: boolean;
 }
 
 function isCalculationMode(value: string): value is CalculationMode {
@@ -47,16 +42,12 @@ export function IncomeCard({
   desiredIncome,
   payPeriod,
   stateCode,
-  filingStatus,
   localityName,
   onModeChange,
   onDesiredIncomeChange,
   onPayPeriodChange,
   onStateCodeChange,
-  onFilingStatusChange,
   onLocalityChange,
-  onCalculate,
-  isCalculating,
 }: IncomeCardProps) {
   const hasLocalTax = stateCode && taxRates[stateCode]?.hasLocalTax;
   const localities = stateCode ? localTaxOptions[stateCode] || [] : [];
@@ -94,10 +85,6 @@ export function IncomeCard({
   const amountHelp = isKnownSalary
     ? "Enter the job or offer amount. VA disability is tax-free and added after estimated taxes."
     : "The take-home you want, including tax-free VA disability compensation.";
-
-  const calculateLabel = isKnownSalary
-    ? "Estimate take-home"
-    : "Calculate required salary";
 
   return (
     <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
@@ -245,44 +232,6 @@ export function IncomeCard({
             </p>
           </div>
         )}
-
-        <div className="flex flex-col gap-2">
-          <Label
-            htmlFor="filing-status"
-            className="text-sm text-muted-foreground"
-          >
-            Filing Status
-          </Label>
-          <Select value={filingStatus} onValueChange={onFilingStatusChange}>
-            <SelectTrigger id="filing-status" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="single">Single</SelectItem>
-                <SelectItem value="marriedJoint">
-                  Married Filing Jointly
-                </SelectItem>
-                <SelectItem value="marriedSeparate">
-                  Married Filing Separately
-                </SelectItem>
-                <SelectItem value="headOfHousehold">
-                  Head of Household
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Button
-          onClick={onCalculate}
-          disabled={isCalculating}
-          className="mt-2 w-full cursor-pointer"
-          size="lg"
-        >
-          <Calculator data-icon="inline-start" />
-          {isCalculating ? "Calculating..." : calculateLabel}
-        </Button>
       </CardContent>
     </Card>
   );

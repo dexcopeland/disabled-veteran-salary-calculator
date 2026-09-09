@@ -3,8 +3,13 @@ import {
   calculateRequiredSalary,
   calculateTakeHomeFromSalary,
   calculateVACompensation,
+  defaultWithholdingSettings,
   validateInputs,
 } from "./calculator";
+import {
+  getStateWithholdingProfile,
+  getStateWithholdingTitle,
+} from "./withholding";
 
 const ROUND_TRIP_SALARY_TOLERANCE = 2;
 const ROUND_TRIP_TAKEHOME_TOLERANCE = 1;
@@ -304,5 +309,157 @@ describe("validateInputs", () => {
     expect(() => validateInputs(0, "TX", "targetTakeHome")).toThrow(
       /take-home/i
     );
+  });
+});
+
+describe("paycheck-style withholding settings", () => {
+  const base = defaultWithholdingSettings("single");
+
+  it("reduces federal withholding when Step 3 claim-dependents amount is entered", () => {
+    const none = calculateTakeHomeFromSalary(
+      80_000,
+      0,
+      "TX",
+      "single",
+      "",
+      base
+    );
+    const withCredit = calculateTakeHomeFromSalary(
+      80_000,
+      0,
+      "TX",
+      "single",
+      "",
+      { ...base, dependentsCredit: 2_200 }
+    );
+
+    expect(withCredit.federalTax).toBeCloseTo(none.federalTax - 2_200, 5);
+    expect(withCredit.totalAnnualTakeHome).toBeGreaterThan(
+      none.totalAnnualTakeHome
+    );
+  });
+
+  it("increases federal and state withheld amounts when additional withholding is entered", () => {
+    const none = calculateTakeHomeFromSalary(
+      80_000,
+      0,
+      "MD",
+      "single",
+      "",
+      base
+    );
+    const extra = calculateTakeHomeFromSalary(
+      80_000,
+      0,
+      "MD",
+      "single",
+      "",
+      {
+        ...base,
+        additionalFederalAnnual: 1_200,
+        additionalStateAnnual: 480,
+      }
+    );
+
+    expect(extra.federalTax).toBeCloseTo(none.federalTax + 1_200, 5);
+    expect(extra.stateTax).toBeCloseTo(none.stateTax + 480, 5);
+    expect(extra.totalAnnualTakeHome).toBeCloseTo(
+      none.totalAnnualTakeHome - 1_680,
+      5
+    );
+  });
+
+  it("lowers Maryland state withholding when MW507 exemptions are claimed", () => {
+    const zeroExemptions = calculateTakeHomeFromSalary(
+      80_000,
+      0,
+      "MD",
+      "single",
+      "",
+      { ...base, stateExemptions: 0 }
+    );
+    const threeExemptions = calculateTakeHomeFromSalary(
+      80_000,
+      0,
+      "MD",
+      "single",
+      "",
+      { ...base, stateExemptions: 3 }
+    );
+
+    expect(getStateWithholdingProfile("MD")).toBe("exemptions");
+    expect(threeExemptions.stateTax).toBeLessThan(zeroExemptions.stateTax);
+    expect(threeExemptions.federalTax).toBeCloseTo(
+      zeroExemptions.federalTax,
+      5
+    );
+  });
+
+  it("zeros and marks no-income-tax states so the state withholding section can hide", () => {
+    const texas = calculateTakeHomeFromSalary(
+      80_000,
+      0,
+      "TX",
+      "single",
+      "",
+      {
+        ...base,
+        stateExemptions: 3,
+        additionalStateAnnual: 1_000,
+      }
+    );
+
+    expect(getStateWithholdingProfile("TX")).toBe("none");
+    expect(getStateWithholdingTitle("TX")).toBe("Current Texas Withholding");
+    expect(texas.hasStateIncomeTax).toBe(false);
+    expect(texas.stateTax).toBe(0);
+  });
+
+  it("raises federal withholding when Step 2c (two jobs) is checked", () => {
+    const oneJob = calculateTakeHomeFromSalary(
+      80_000,
+      0,
+      "TX",
+      "single",
+      "",
+      { ...base, twoJobs: false }
+    );
+    const twoJobs = calculateTakeHomeFromSalary(
+      80_000,
+      0,
+      "TX",
+      "single",
+      "",
+      { ...base, twoJobs: true }
+    );
+
+    expect(twoJobs.federalTax).toBeGreaterThan(oneJob.federalTax);
+  });
+
+  it("round-trips known salary with W-4 adjustments applied", () => {
+    const settings = {
+      ...base,
+      dependentsCredit: 2_200,
+      additionalFederalAnnual: 600,
+      twoJobs: true,
+    };
+    const forward = calculateTakeHomeFromSalary(
+      90_000,
+      0,
+      "FL",
+      "single",
+      "",
+      settings
+    );
+    const reverse = calculateRequiredSalary(
+      forward.totalAnnualTakeHome,
+      0,
+      "FL",
+      "single",
+      "",
+      settings
+    );
+
+    expect(Math.abs(reverse.grossSalary - 90_000)).toBeLessThanOrEqual(2);
   });
 });
